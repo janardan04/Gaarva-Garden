@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Reveal from '../components/Reveal';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const allEvents = [
   { id: 1, title: 'Sufi Night Live', category: 'Music', date: 'Every Friday', time: '8:00 PM', price: '₹999', desc: 'Immerse yourself in soulful Sufi melodies with curated candlelight dinner under the stars.', emoji: '🎵', featured: true },
@@ -17,7 +19,33 @@ const categories = ['All', 'Music', 'Food', 'Corporate', 'Celebration', 'Enterta
 
 export default function Events() {
   const [activeCategory, setActiveCategory] = useState('All');
-  const filtered = activeCategory === 'All' ? allEvents : allEvents.filter(e => e.category === activeCategory);
+  const [eventsData, setEventsData] = useState([]);
+  const [halls, setHalls] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'events'));
+        const eventsList = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setEventsData(eventsList.length > 0 ? eventsList : allEvents);
+
+        const hSnapshot = await getDocs(collection(db, 'halls'));
+        setHalls(hSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setEventsData(allEvents);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  const filtered = activeCategory === 'All' ? eventsData : eventsData.filter(e => e.category === activeCategory);
 
   return (
     <div style={{ background: 'var(--cream)', minHeight: '100vh', paddingTop: 72 }}>
@@ -56,6 +84,43 @@ export default function Events() {
           ))}
         </div>
 
+        {/* Halls Section */}
+        {halls.length > 0 && (
+          <div style={{ marginBottom: 64 }}>
+            <h2 style={{ fontFamily: 'var(--serif)', fontSize: 36, color: 'var(--ink)', marginBottom: 24, textAlign: 'center' }}>Book Our Halls</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 24 }}>
+              {halls.map((hall, i) => (
+                <Reveal key={hall.id} delay={i * 60}>
+                  <div style={{
+                    background: 'var(--white)', borderRadius: 24, border: '1px solid rgba(201,168,76,0.2)',
+                    overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'all 400ms', position: 'relative'
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.boxShadow = '0 24px 48px rgba(26,23,20,0.1)'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.2)'; }}
+                  >
+                    {hall.imageBase64 && (
+                      <div style={{ width: '100%', height: 220, overflow: 'hidden' }}>
+                        <img src={hall.imageBase64} alt={hall.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    )}
+                    <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <h3 style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 500, color: 'var(--ink)', marginBottom: 8 }}>{hall.name}</h3>
+                      <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--gold-dark)', marginBottom: 16 }}>Capacity: {hall.capacity}</div>
+                      <p style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-muted)', lineHeight: 1.6, marginBottom: 24, flex: 1 }}>{hall.description}</p>
+                      <Link to={`/hall/${hall.id}`} style={{
+                        display: 'block', textAlign: 'center', padding: '14px', borderRadius: 100, textDecoration: 'none',
+                        background: 'linear-gradient(135deg,var(--gold-dark),var(--gold))', color: 'var(--ink)',
+                        fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
+                        transition: 'all 300ms', boxShadow: '0 8px 32px rgba(201,168,76,0.3)',
+                      }}>Check Availability & Book</Link>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Events grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 24 }}>
           {filtered.map((event, i) => (
@@ -73,8 +138,15 @@ export default function Events() {
                   <div style={{ position: 'absolute', top: 16, right: 16, padding: '4px 12px', borderRadius: 100, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--gold-dark)', letterSpacing: '0.1em' }}>★ Featured</div>
                 )}
                 <div style={{ height: 3, background: 'linear-gradient(90deg,var(--gold-dark),var(--gold))' }} />
+                {event.imageBase64 && (
+                  <div style={{ width: '100%', height: 200, overflow: 'hidden' }}>
+                    <img src={event.imageBase64} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
                 <div style={{ padding: '32px 28px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 36, marginBottom: 16 }}>{event.emoji}</div>
+                  {!event.imageBase64 && event.emoji && (
+                    <div style={{ fontSize: 36, marginBottom: 16 }}>{event.emoji}</div>
+                  )}
                   <div style={{ fontFamily: 'var(--sans)', fontSize: 10, color: 'var(--gold)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 }}>{event.category}</div>
                   <h3 style={{ fontFamily: 'var(--serif)', fontSize: 24, fontWeight: 500, color: 'var(--ink)', marginBottom: 12, lineHeight: 1.2 }}>{event.title}</h3>
                   <p style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.8, flex: 1, marginBottom: 24 }}>{event.desc}</p>

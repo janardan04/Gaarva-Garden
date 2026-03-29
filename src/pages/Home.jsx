@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Reveal from '../components/Reveal';
+import VideoCard from '../components/VideoCard';
 
 /* ─── Animated count-up number ─── */
 function CountUp({ to, suffix = '' }) {
@@ -261,21 +262,30 @@ export default function Home() {
           <Reveal direction="right">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               {[
-                { icon: '🌿', title: 'Open-Air Garden', sub: 'Under the stars every night', full: true },
+                { type: 'video', full: true },
                 { icon: '🎵', title: 'Live Entertainment', sub: 'Music & performances weekly' },
                 { icon: '✨', title: '8+ Years', sub: 'Of crafting memories', dark: true },
-              ].map((c, i) => (
-                <div key={i} style={{
-                  padding: '28px 24px', borderRadius: 20,
-                  background: c.dark ? 'var(--ink)' : 'var(--white)',
-                  border: c.dark ? 'none' : '1px solid rgba(201,168,76,0.15)',
-                  gridColumn: c.full ? '1 / -1' : 'auto',
-                }}>
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>{c.icon}</div>
-                  <div style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: c.dark ? 'rgba(255,255,255,0.9)' : 'var(--ink)', marginBottom: 6 }}>{c.title}</div>
-                  <div style={{ fontFamily: 'var(--sans)', fontSize: 12, color: c.dark ? 'var(--gold)' : 'var(--ink-muted)', letterSpacing: '0.06em' }}>{c.sub}</div>
-                </div>
-              ))}
+              ].map((c, i) => {
+                if (c.type === 'video') {
+                  return (
+                    <div key={i} style={{ gridColumn: c.full ? '1 / -1' : 'auto' }}>
+                      <VideoCard icon={c.icon} title={c.title} subtitle={c.sub} />
+                    </div>
+                  );
+                }
+                return (
+                  <div key={i} style={{
+                    padding: '28px 24px', borderRadius: 20,
+                    background: c.dark ? 'var(--ink)' : 'var(--white)',
+                    border: c.dark ? 'none' : '1px solid rgba(201,168,76,0.15)',
+                    gridColumn: c.full ? '1 / -1' : 'auto',
+                  }}>
+                    <div style={{ fontSize: 32, marginBottom: 12 }}>{c.icon}</div>
+                    <div style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, color: c.dark ? 'rgba(255,255,255,0.9)' : 'var(--ink)', marginBottom: 6 }}>{c.title}</div>
+                    <div style={{ fontFamily: 'var(--sans)', fontSize: 12, color: c.dark ? 'var(--gold)' : 'var(--ink-muted)', letterSpacing: '0.06em' }}>{c.sub}</div>
+                  </div>
+                );
+              })}
             </div>
           </Reveal>
 

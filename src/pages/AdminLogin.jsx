@@ -108,11 +108,7 @@ export default function AdminLogin() {
             </button>
           </form>
 
-          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid rgba(201,168,76,0.1)', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>
-              Demo: <span style={{ color: 'rgba(255,255,255,0.5)' }}>admin@gaarvagarden.com</span> / <span style={{ color: 'rgba(255,255,255,0.5)' }}>admin123</span>
-            </p>
-          </div>
+
         </div>
       </div>
     </div>

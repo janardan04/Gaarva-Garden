@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import Reveal from '../components/Reveal';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const contactInfo = [
   { icon: '📍', label: 'Address', value: '123 Garden Street, Kothrud, Pune, Maharashtra 411038' },
@@ -24,15 +26,27 @@ const labelStyle = {
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    console.log('Contact data:', form);
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
-    setForm({ name: '', email: '', subject: '', message: '' });
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, 'contacts'), {
+        ...form,
+        createdAt: serverTimestamp()
+      });
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 5000);
+      setForm({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      console.error('Error adding document: ', error);
+      alert('Failed to send message. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const focusHandler = e => (e.target.style.borderColor = 'rgba(201,168,76,0.6)');
@@ -124,17 +138,19 @@ export default function Contact() {
 
               <button
                 type="submit"
+                disabled={isSubmitting}
                 style={{
                   width: '100%', padding: '16px', borderRadius: 100,
                   background: 'var(--ink)', border: 'none',
                   color: 'var(--gold-light)', fontFamily: 'var(--sans)', fontSize: 13,
-                  fontWeight: 500, cursor: 'pointer', letterSpacing: '0.1em',
+                  fontWeight: 500, cursor: isSubmitting ? 'not-allowed' : 'pointer', letterSpacing: '0.1em',
                   textTransform: 'uppercase', transition: 'all 300ms',
+                  opacity: isSubmitting ? 0.7 : 1,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--gold)'; e.currentTarget.style.color = 'var(--ink)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--ink)'; e.currentTarget.style.color = 'var(--gold-light)'; }}
+                onMouseEnter={e => { if(!isSubmitting) { e.currentTarget.style.background = 'var(--gold)'; e.currentTarget.style.color = 'var(--ink)'; } }}
+                onMouseLeave={e => { if(!isSubmitting) { e.currentTarget.style.background = 'var(--ink)'; e.currentTarget.style.color = 'var(--gold-light)'; } }}
               >
-                Send Message
+                {isSubmitting ? 'Sending...' : 'Send Message'}
               </button>
             </form>
           </div>

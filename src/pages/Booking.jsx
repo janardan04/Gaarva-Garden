@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Reveal from '../components/Reveal';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const eventOptions = [
   'Sufi Night Live', 'Sunday Brunch Fest', 'Corporate Mixer Night',
@@ -26,15 +28,44 @@ export default function Booking() {
     date: '', time: '', event: '', message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [eventsList, setEventsList] = useState(eventOptions);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'events'));
+        const eventsData = querySnapshot.docs.map(doc => doc.data().title);
+        if (eventsData.length > 0) {
+          setEventsList(eventsData);
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+      }
+    };
+    fetchEvents();
+  }, []);
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    console.log('Booking data:', form);
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
-    setForm({ name: '', email: '', phone: '', guests: '', date: '', time: '', event: '', message: '' });
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, 'bookings'), {
+        ...form,
+        status: 'Pending',
+        createdAt: serverTimestamp()
+      });
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 5000);
+      setForm({ name: '', email: '', phone: '', guests: '', date: '', time: '', event: '', message: '' });
+    } catch (error) {
+      console.error('Error adding booking: ', error);
+      alert('Failed to submit booking request. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const focusHandler = e => (e.target.style.borderColor = 'rgba(201,168,76,0.6)');
@@ -113,7 +144,7 @@ export default function Booking() {
                 <label style={labelStyle}>Select Event *</label>
                 <select name="event" value={form.event} onChange={handleChange} required style={inputStyle} onFocus={focusHandler} onBlur={blurHandler}>
                   <option value="">Choose an event...</option>
-                  {eventOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                  {eventsList.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
 
@@ -130,16 +161,18 @@ export default function Booking() {
 
             <button
               type="submit"
+              disabled={isSubmitting}
               style={{
                 width: '100%', padding: '18px', borderRadius: 100,
                 background: 'linear-gradient(135deg,var(--gold-dark),var(--gold))',
                 border: 'none', color: 'var(--ink)', fontFamily: 'var(--sans)',
-                fontSize: 14, fontWeight: 500, cursor: 'pointer',
+                fontSize: 14, fontWeight: 500, cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 letterSpacing: '0.1em', textTransform: 'uppercase',
                 boxShadow: '0 8px 32px rgba(201,168,76,0.3)', transition: 'all 300ms',
+                opacity: isSubmitting ? 0.7 : 1,
               }}
             >
-              Submit Booking Request
+              {isSubmitting ? 'Submitting...' : 'Submit Booking Request'}
             </button>
           </form>
         </Reveal>
